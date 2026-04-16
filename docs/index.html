@@ -9,10 +9,10 @@
   <ul id="list"></ul>
 
   <script>
-    const owner = "horsevszebra";
-    const repo = "binaryfiles";
+    const owner = "YOUR_USERNAME";
+    const repo = "YOUR_REPO";
 
-    fetch(`https://api.github.com/repos/${owner}/${repo}/contents/page/public`)
+    fetch(`https://api.github.com/repos/${owner}/${repo}/contents/docs/public`)
       .then(res => res.json())
       .then(files => {
         const ul = document.getElementById("list");
@@ -24,7 +24,6 @@
 
             a.href = file.download_url;
             a.textContent = file.name;
-            a.download = file.name;
 
             li.appendChild(a);
             ul.appendChild(li);
