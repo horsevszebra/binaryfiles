@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Downloads</title>
+</head>
+<body>
+  <h1>Downloads</h1>
+  <ul id="list"></ul>
+
+  <script>
+    const owner = "horsevszebra";
+    const repo = "binaryfiles";
+
+    fetch(`https://api.github.com/repos/${owner}/${repo}/contents/page/public`)
+      .then(res => res.json())
+      .then(files => {
+        const ul = document.getElementById("list");
+
+        files.forEach(file => {
+          if (file.type === "file") {
+            const li = document.createElement("li");
+            const a = document.createElement("a");
+
+            a.href = file.download_url;
+            a.textContent = file.name;
+            a.download = file.name;
+
+            li.appendChild(a);
+            ul.appendChild(li);
+          }
+        });
+      });
+  </script>
+</body>
+</html>
