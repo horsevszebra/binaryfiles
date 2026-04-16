@@ -1,36 +1,115 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Downloads</title>
+  <style>
+    body { font-family: sans-serif; line-height: 1.6; padding: 16px; }
+    .error { color: #b00020; white-space: pre-wrap; }
+    .muted { color: #666; }
+    ul { padding-left: 1.25rem; }
+    li { margin: 0.25rem 0; }
+  </style>
 </head>
 <body>
   <h1>Downloads</h1>
+  <p id="status" class="muted">読み込み中...</p>
+  <div id="error" class="error"></div>
   <ul id="list"></ul>
 
-<script>
-const owner = "YOUR_USERNAME";
-const repo = "YOUR_REPO";
+  <script>
+    const owner = "YOUR_USERNAME";
+    const repo = "YOUR_REPO";
+    const rootPath = "docs/public"; // Pages配下が docs の場合
 
-fetch(`https://api.github.com/repos/${owner}/${repo}/contents/docs/public`)
-  .then(res => res.json())
-  .then(files => {
-    const ul = document.getElementById("list");
+    const listEl = document.getElementById("list");
+    const statusEl = document.getElementById("status");
+    const errorEl = document.getElementById("error");
 
-    files.forEach(file => {
-      if (file.type === "file") {
-        const li = document.createElement("li");
-        const a = document.createElement("a");
+    function escapePathSegments(path) {
+      return path
+        .split("/")
+        .map(segment => encodeURIComponent(segment))
+        .join("/");
+    }
 
-        // 重要ポイント
-        a.href = file.download_url;
-        a.textContent = file.name;
+    function fallbackRawUrl(path) {
+      // download_url が何らかの理由で null の場合だけ使う
+      // ref 未指定の Contents API は既定ブランチを見るため、
+      // ブランチを固定したくないなら fallback 自体を使わない方が安全
+      return `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${escapePathSegments(path)}`;
+    }
 
-        li.appendChild(a);
-        ul.appendChild(li);
+    function createFileItem(file) {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+
+      a.href = file.download_url || fallbackRawUrl(file.path);
+      a.textContent = file.name;       // innerHTML は使わない
+      a.setAttribute("download", file.name);
+      a.rel = "noopener";
+
+      li.appendChild(a);
+      return li;
+    }
+
+    async function fetchDir(path) {
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${escapePathSegments(path)}`;
+
+      const res = await fetch(apiUrl, {
+        headers: {
+          "Accept": "application/vnd.github+json"
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error(`GitHub API error: ${res.status} ${res.statusText}`);
       }
-    });
-  });
-</script>
+
+      const items = await res.json();
+
+      if (!Array.isArray(items)) {
+        throw new Error("想定外のAPI応答です。ディレクトリ配列ではありません。");
+      }
+
+      return items;
+    }
+
+    async function renderDir(path, parentUl) {
+      const items = await fetchDir(path);
+
+      // 日本語寄りに並べる
+      items.sort((a, b) => a.name.localeCompare(b.name, "ja"));
+
+      for (const item of items) {
+        if (item.type === "file") {
+          parentUl.appendChild(createFileItem(item));
+        } else if (item.type === "dir") {
+          const li = document.createElement("li");
+          const title = document.createElement("strong");
+          title.textContent = item.name;
+
+          const subUl = document.createElement("ul");
+          li.appendChild(title);
+          li.appendChild(subUl);
+          parentUl.appendChild(li);
+
+          await renderDir(item.path, subUl); // 再帰
+        }
+      }
+    }
+
+    (async () => {
+      try {
+        await renderDir(rootPath, listEl);
+        statusEl.textContent = "読み込み完了";
+      } catch (err) {
+        statusEl.textContent = "読み込み失敗";
+        errorEl.textContent = String(err);
+        console.error(err);
+      }
+    })();
+  </script>
 </body>
 </html>
