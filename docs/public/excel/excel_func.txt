@@ -1,0 +1,7 @@
+=LET(
+  markerRange,$X$1:$X$100,
+  startRow,ROW($X$1)+MATCH("はじめ",markerRange,0),
+  endRow,ROW($X$1)+MATCH("おわり",markerRange,0)-2,
+  expected,"=SUM("&ADDRESS(startRow,COLUMN(),4)&":"&ADDRESS(endRow,COLUMN(),4)&")",
+  IF(FORMULATEXT(A33)=expected,"OK","NG")
+)
