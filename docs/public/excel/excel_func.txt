@@ -5,3 +5,17 @@
   expected,"=SUM("&ADDRESS(startRow,COLUMN(),4)&":"&ADDRESS(endRow,COLUMN(),4)&")",
   IF(FORMULATEXT(A33)=expected,"OK","NG")
 )
+
+=LET(
+  markerCol,$X$1:$X$100,
+  startPos,IFERROR(MATCH("はじめ",markerCol,0),""),
+  endPos,IFERROR(MATCH("おわり",markerCol,0),""),
+  IF(OR(startPos="",endPos=""),"目印なし",
+    LET(
+      startRow,startPos+1,
+      endRow,endPos-1,
+      expected,"=SUM("&ADDRESS(startRow,COLUMN(),4)&":"&ADDRESS(endRow,COLUMN(),4)&")",
+      IF(FORMULATEXT(A33)=expected,"OK","NG")
+    )
+  )
+)
